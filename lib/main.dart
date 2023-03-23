@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,14 +51,39 @@ class _MyHomePageState extends State<MyHomePage> {
   String sendData = defaultSendData;
 
   //主机地址和端口
-  static const defaultHost = '192.168.0.251';
-  static const defaultPort = 1234;
+  static const defaultHost = '192.168.0.205';
+  static const defaultPort = 1134;
   String host = defaultHost;
   int port = defaultPort;
+
   //图表数据列表
-  List<String>? drDataList;
-  List<String>? spDataList;
-  List<String>? hrDataList;
+  List<Map<String, dynamic>> drDataList = [];
+  List<Map<String, dynamic>> spDataList = [];
+  List<Map<String, dynamic>> hrDataList = [];
+  List<FlSpot> drSpotList = [
+    const FlSpot(1, 75),
+    const FlSpot(2, 78),
+    const FlSpot(3, 76),
+    const FlSpot(4, 75),
+    const FlSpot(5, 78),
+  ];
+
+  List<FlSpot> spSpotList = [
+    const FlSpot(1, 65),
+    const FlSpot(2, 68),
+    const FlSpot(3, 66),
+    const FlSpot(4, 65),
+    const FlSpot(5, 68),
+  ];
+
+  List<FlSpot> hrSpotList = [
+    const FlSpot(1, 65),
+    const FlSpot(2, 68),
+    const FlSpot(3, 66),
+    const FlSpot(4, 65),
+    const FlSpot(5, 68),
+  ];
+
   //发送的数据
   double sendDp = 0;
   double sendSp = 0;
@@ -74,11 +100,31 @@ class _MyHomePageState extends State<MyHomePage> {
   //监听数据流
   Future<void> dataListener() async {
     socket.listen((event) {
-      // print(event);
       String data = utf8.decode(event);
-
       setState(() {
+        //处理数据
         receivedData = data;
+        DateTime now = DateTime.now();
+        List<String> values = receivedData.split(',');
+        for (String value in values) {
+          String key = value.split(':')[0];
+          double data = double.parse(value.split(':')[1]);
+          if (key == 's') {
+            Map<String, dynamic> newData = {'data': data, 'time': now.toString()};
+            spDataList.add(newData);
+          } else if (key == 'h') {
+            Map<String, dynamic> newData = {'data': data, 'time': now.toString()};
+            hrDataList.add(newData);
+          } else if (key == 'd') {
+            Map<String, dynamic> newData = {'data': data, 'time': now.toString()};
+            drDataList.add(newData);
+          }
+        }
+
+        print(drDataList.toString());
+        print(spDataList.toString());
+        print(hrDataList.toString());
+
         if (receivedData != '无响应') {}
       });
     });
@@ -104,25 +150,70 @@ class _MyHomePageState extends State<MyHomePage> {
   //数据序列化
   void saveData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (drDataList != null) {
-      prefs.setStringList("drDataList", drDataList!);
+    //抽象
+    void _saveDataList(String key, List<Map<String, dynamic>> dataList) async {
+      if (dataList.isNotEmpty) {
+        List<String> jsonStringList = dataList.map((e) => json.encode(e)).toList();
+        await prefs.setStringList(key, jsonStringList);
+      }
     }
-    if (spDataList != null) {
-      prefs.setStringList("spDataList", spDataList!);
-    }
-    if (hrDataList != null) {
-      prefs.setStringList("hrDataList ", hrDataList!);
-    }
+
+    // 调用
+    _saveDataList("drDataJsonList", drDataList);
+    _saveDataList("spDataJsonList", spDataList);
+    _saveDataList("hrDataJsonList", hrDataList);
   }
 
   //数据反序列化
   void loadData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey("drDataList") && prefs.containsKey("spDataList") && prefs.containsKey("hrDataList")) {
-      drDataList = prefs.getStringList("drDataList");
-      spDataList = prefs.getStringList("spDataList");
-      hrDataList = prefs.getStringList("hrDataList");
+    //抽象
+    List<Map<String, dynamic>> getDataListFromPrefs(String key) {
+      if (prefs.containsKey(key)) {
+        List<String> jsonList = prefs.getStringList(key) ?? [];
+        return jsonList.map((e) => json.decode(e)).toList().cast<Map<String, dynamic>>();
+      }
+      return [];
     }
+
+    // 调用
+    drDataList = getDataListFromPrefs('drDataJsonList');
+    spDataList = getDataListFromPrefs('spDataJsonList');
+    hrDataList = getDataListFromPrefs('hrDataJsonList');
+    setState(() {});
+  }
+
+  //清空数据
+  void clearData() async {
+    setState(() {
+      drDataList = [];
+      spDataList = [];
+      hrDataList = [];
+
+      drSpotList = [
+        const FlSpot(1, 0),
+        const FlSpot(2, 0),
+        const FlSpot(3, 0),
+        const FlSpot(4, 0),
+        const FlSpot(5, 0),
+      ];
+
+      spSpotList = [
+        const FlSpot(1, 0),
+        const FlSpot(2, 0),
+        const FlSpot(3, 0),
+        const FlSpot(4, 0),
+        const FlSpot(5, 0),
+      ];
+
+      hrSpotList = [
+        const FlSpot(1, 0),
+        const FlSpot(2, 0),
+        const FlSpot(3, 0),
+        const FlSpot(4, 0),
+        const FlSpot(5, 0),
+      ];
+    });
   }
 
   //ui绘制
@@ -133,16 +224,26 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: const Text("TCP控制器"),
       ),
-      body: SizedBox(
-        height: MediaQuery.of(context).size.height,
+      body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildLinkedArea(),
             Row(),
             _buildCheckArea(),
+            const SizedBox(height: 20),
             _buildDropDownButton(),
+            const SizedBox(height: 20),
+            Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
+              ElevatedButton(onPressed: saveData, child: Text('保存数据')),
+              SizedBox(width: 10),
+              ElevatedButton(onPressed: loadData, child: Text('读取数据')),
+              SizedBox(width: 10),
+              ElevatedButton(onPressed: clearData, child: Text('清空数据')),
+            ]),
+            const SizedBox(height: 20),
             _buildLineChartOne(),
+            const SizedBox(height: 20),
             _buildLineChartTwo(),
           ],
         ),
@@ -151,13 +252,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   //下拉菜单
-
   Widget _buildDropDownButton() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("数据选择"),
+        const Text(
+          "数据选择",
+          style: TextStyle(fontSize: 20),
+        ),
         Container(
           margin: const EdgeInsets.symmetric(vertical: 5),
           width: 200,
@@ -197,7 +300,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: "主机地址",
-                  hintText: "例：192.168.0.251",
+                  hintText: "默认：$defaultHost",
                 ),
                 onChanged: (e) => {
                   setState(() {
@@ -207,7 +310,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               TextField(
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "端口", hintText: "例：1234"),
+                decoration: const InputDecoration(labelText: "端口", hintText: "默认：$defaultPort"),
                 onChanged: (e) => {
                   setState(() {
                     port = int.parse(e);
@@ -225,8 +328,69 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  //生成折线图数据
+  List<FlSpot>? generateSpotList(List<Map<String, dynamic>> dataList) {
+    if (dataList.length > 5) {
+      List temp = dataList.sublist(dataList.length - 6, dataList.length - 1);
+      return temp.mapIndexed((index, element) {
+        return FlSpot(index.toDouble(), element['data'].toDouble());
+      }).toList();
+    }
+    return null;
+  }
+
+  Widget myBottomTitle(double value, TitleMeta meta) {
+    // String getHourAndMinute(List temp, int i) {
+    //   return temp[i]['time'].split(' ')[1].split('.')[0];
+    // }
+    //
+    // String getYearAndMonth(List temp, int i) {
+    //   return temp[i]['time'].split(' ')[0];
+    // }
+
+    String getBottomLineTitle(List temp, int i) {
+      return temp[i]['time'].split(' ')[1].split('.')[0] + '\n' + temp[i]['time'].split(' ')[0];
+    }
+
+    const style = TextStyle(
+      fontSize: 12,
+    );
+    List temp = [];
+    String text = '00';
+    if (drDataList.length > 5) {
+      temp = drDataList.sublist(drDataList.length - 6, drDataList.length - 1);
+      print(temp);
+
+      switch (value.toInt()) {
+        case 0:
+          text = getBottomLineTitle(temp, 0);
+          break;
+        case 1:
+          text = getBottomLineTitle(temp, 1);
+          break;
+        case 2:
+          text = getBottomLineTitle(temp, 2);
+          break;
+        case 3:
+          text = getBottomLineTitle(temp, 3);
+          break;
+        case 4:
+          text = getBottomLineTitle(temp, 4);
+          break;
+        default:
+          text = '000';
+      }
+    }
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(text, style: style, textAlign: TextAlign.center),
+    );
+  }
+
   //折线图1 ui
   Widget _buildLineChartOne() {
+    drSpotList = generateSpotList(drDataList) ?? drSpotList;
+    spSpotList = generateSpotList(spDataList) ?? spSpotList;
     return Column(
       children: [
         const Text(
@@ -237,36 +401,23 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         SizedBox(
-          height: 180,
+          height: 200,
           width: 400,
           child: LineChart(
             LineChartData(
               titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                      sideTitles:
+                          SideTitles(showTitles: true, interval: 1, reservedSize: 64, getTitlesWidget: myBottomTitle)),
                   topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false, interval: 0.5, reservedSize: 44))),
               lineBarsData: [
                 LineChartBarData(
                   isCurved: false,
                   color: Colors.red,
                   barWidth: 4,
-                  spots: [
-                    const FlSpot(1, 105),
-                    const FlSpot(2, 102),
-                    const FlSpot(3, 109),
-                    const FlSpot(4, 102),
-                    const FlSpot(5, 104)
-                  ],
+                  spots: drSpotList,
                 ),
-                LineChartBarData(
-                  isCurved: false,
-                  barWidth: 4,
-                  spots: [
-                    const FlSpot(1, 75),
-                    const FlSpot(2, 78),
-                    const FlSpot(3, 76),
-                    const FlSpot(4, 75),
-                    const FlSpot(5, 78),
-                  ],
-                ),
+                LineChartBarData(isCurved: false, barWidth: 4, spots: spSpotList),
               ],
             ),
           ),
@@ -277,6 +428,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   //折线图2 ui
   Widget _buildLineChartTwo() {
+    hrSpotList = generateSpotList(hrDataList) ?? hrSpotList;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -289,7 +441,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         SizedBox(
-            height: 140,
+            height: 200,
             width: 400,
             child: LineChart(
               LineChartData(
@@ -301,22 +453,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     )),
                     bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 44,
-                    ))),
+                            showTitles: true, interval: 1, reservedSize: 64, getTitlesWidget: myBottomTitle))),
                 lineBarsData: [
-                  LineChartBarData(
-                    isCurved: false,
-                    color: Colors.red,
-                    barWidth: 4,
-                    spots: [
-                      const FlSpot(1, 75),
-                      const FlSpot(2, 72),
-                      const FlSpot(3, 79),
-                      const FlSpot(4, 76),
-                      const FlSpot(5, 73)
-                    ],
-                  ),
+                  LineChartBarData(isCurved: false, color: Colors.red, barWidth: 4, spots: hrSpotList),
                 ],
               ),
             )),
@@ -380,7 +519,7 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-                sendToPeer("s:$sendSp,d:$sendDp,h:$sendHr");
+                sendToPeer("s:$sendSp,d:$sendDp,h:$sendHr\r\n");
               },
               label: const Text("校验"),
               icon: const Icon(Icons.send),
@@ -393,7 +532,7 @@ class _MyHomePageState extends State<MyHomePage> {
           height: 100,
           child: ElevatedButton.icon(
             onPressed: () {
-              sendToPeer("m");
+              sendToPeer("m\r\n");
             },
             label: const Text("测量"),
             icon: const Icon(Icons.change_circle),

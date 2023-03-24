@@ -2,7 +2,7 @@
 
 ## Description
 
-Heart Assistant is a Flutter-based application for measuring user's heart rate, systolic pressure, and diastolic pressure. By connecting to a heart monitor device through a TCP connection established using sockets, users can view real-time heart rate, high pressure, and low pressure data in the application and store this data for tracking and analysis.
+tcp_sphygmomanometer_cotroller is a Flutter-based application for measuring user's heart rate, systolic pressure, and diastolic pressure. By connecting to a heart monitor device through a TCP connection established using sockets, users can view real-time heart rate, high pressure, and low pressure data in the application and store this data for tracking and analysis.
 
 ## Getting Started
 

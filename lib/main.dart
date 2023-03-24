@@ -89,6 +89,10 @@ class _MyHomePageState extends State<MyHomePage> {
   double sendSp = 0;
   double sendHr = 0;
 
+  //数据范围选择
+  int preNum = 1;
+  int afterNum = 6;
+
   //发送信息到服务端
   Future<void> sendToPeer(String data) async {
     isCanSend = false;
@@ -268,20 +272,30 @@ class _MyHomePageState extends State<MyHomePage> {
           child: DropdownButton(
               items: const [
                 DropdownMenuItem(
-                  child: Text('最近5条数据'),
                   value: 1,
+                  child: Text('最近5条数据'),
                 ),
                 DropdownMenuItem(
-                  child: Text('最近第5-第10条数据'),
                   value: 2,
+                  child: Text('最近第5-第10条数据'),
                 ),
                 DropdownMenuItem(
-                  child: Text('最近第10-第15条数据'),
                   value: 3,
+                  child: Text('最近第10-第15条数据'),
                 ),
               ],
               onChanged: (value) {
-                print(value);
+                if (value == 1 && drDataList.length >= 5) {
+                  preNum = 1;
+                  afterNum = 6;
+                } else if (value == 2 && drDataList.length >= 10) {
+                  preNum = 6;
+                  afterNum = 10;
+                } else if (value == 3 && drDataList.length >= 15) {
+                  preNum = 10;
+                  afterNum = 14;
+                }
+                setState(() {});
               }),
         ),
       ],
@@ -330,8 +344,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   //生成折线图数据
   List<FlSpot>? generateSpotList(List<Map<String, dynamic>> dataList) {
-    if (dataList.length > 5) {
-      List temp = dataList.sublist(dataList.length - 6, dataList.length - 1);
+    if (dataList.length >= 5) {
+      List temp = dataList.sublist(dataList.length - afterNum, dataList.length - preNum);
       return temp.mapIndexed((index, element) {
         return FlSpot(index.toDouble(), element['data'].toDouble());
       }).toList();
@@ -339,15 +353,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return null;
   }
 
+  //生成折线图底下标题
   Widget myBottomTitle(double value, TitleMeta meta) {
-    // String getHourAndMinute(List temp, int i) {
-    //   return temp[i]['time'].split(' ')[1].split('.')[0];
-    // }
-    //
-    // String getYearAndMonth(List temp, int i) {
-    //   return temp[i]['time'].split(' ')[0];
-    // }
-
     String getBottomLineTitle(List temp, int i) {
       return temp[i]['time'].split(' ')[1].split('.')[0] + '\n' + temp[i]['time'].split(' ')[0];
     }
@@ -357,9 +364,9 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     List temp = [];
     String text = '00';
-    if (drDataList.length > 5) {
-      temp = drDataList.sublist(drDataList.length - 6, drDataList.length - 1);
-      print(temp);
+    if (drDataList.length >= 5) {
+      temp = drDataList.sublist(drDataList.length - afterNum, drDataList.length - preNum);
+
 
       switch (value.toInt()) {
         case 0:

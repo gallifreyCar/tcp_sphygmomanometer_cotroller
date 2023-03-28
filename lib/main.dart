@@ -125,9 +125,9 @@ class _MyHomePageState extends State<MyHomePage> {
           }
         }
 
-        print(drDataList.toString());
-        print(spDataList.toString());
-        print(hrDataList.toString());
+        // print(drDataList.toString());
+        // print(spDataList.toString());
+        // print(hrDataList.toString());
 
         if (receivedData != '无响应') {}
       });
@@ -239,11 +239,11 @@ class _MyHomePageState extends State<MyHomePage> {
             _buildDropDownButton(),
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
-              ElevatedButton(onPressed: saveData, child: Text('保存数据')),
-              SizedBox(width: 10),
-              ElevatedButton(onPressed: loadData, child: Text('读取数据')),
-              SizedBox(width: 10),
-              ElevatedButton(onPressed: clearData, child: Text('清空数据')),
+              ElevatedButton(onPressed: saveData, child: const Text('保存数据')),
+              const SizedBox(width: 10),
+              ElevatedButton(onPressed: loadData, child: const Text('读取数据')),
+              const SizedBox(width: 10),
+              ElevatedButton(onPressed: clearData, child: const Text('清空数据')),
             ]),
             const SizedBox(height: 20),
             _buildLineChartOne(),
@@ -366,7 +366,6 @@ class _MyHomePageState extends State<MyHomePage> {
     String text = '00';
     if (drDataList.length >= 5) {
       temp = drDataList.sublist(drDataList.length - afterNum, drDataList.length - preNum);
-
 
       switch (value.toInt()) {
         case 0:
